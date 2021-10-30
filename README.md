@@ -7,3 +7,5 @@ Demo: https://themindvirus.github.io/codeviz/
 ![screenshot](https://github.com/TheMindVirus/codeviz/blob/main/screenshot.png)
 
 Audio is going to become MetaSound and Videos are going to become MetaClips once the MetaVerse kicks off.
+
+![32-band-mod](https://github.com/TheMindVirus/codeviz/blob/main/32-band-mod.png)
