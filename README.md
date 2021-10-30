@@ -1,5 +1,5 @@
 # codeviz
-WebAudio Live Music Visualiser featuring original music, dancing colour bars and scrolling its own code
+WebAudio Live Music Visualiser featuring original music, dancing colour bars and scrolling its own code \
 Aurora - TheMindVirus
 
 Demo: https://themindvirus.github.io/codeviz/
