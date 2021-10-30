@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>CodeViz</title>
+    <script>
+      var audio = null;
+      var button = null;
+      var canvas = null;
+      var ctx = null;
+      var div1 = null;
+      var div2 = null;
+
+      var sound_engine = null;
+      var audio_source = null;
+      var level_biquad = [];
+      var level_meters = [];
+      var levels = [];
+
+      var bands = 32;
+      var frequencies = null;
+      var smooth = 3; //15;
+      var gain = 10;
+      var calibration = 5;
+      var peak_alpha = 0.1;
+      var level_alpha = 0.8;
+
+      var text1 = "Something Random";
+      var text2 = "Something Random";
+      var text1pos = 0;
+      var text2pos = 0;
+      var text1chance = 0.10;
+      var text2chance = 0.10;
+      var stride = 0;
+
+      window.onload = function()
+      {
+          audio = document.getElementsByTagName("audio")[0];
+          button = document.getElementsByTagName("button")[0];
+          canvas = document.getElementsByTagName("canvas")[0];
+          ctx = canvas.getContext("2d"); //webgl???
+          div1 = document.getElementById("div1");
+          div2 = document.getElementById("div2");
+          text1 = getFile("index.html");
+          text2 = getFile("LevelMeter.js");
+          button.innerText = "Play";
+          button.onclick = begin;
+          audio.loop = true;
+          window.onresize();
+      }
+
+      window.onresize = function()
+      {
+          canvas.width = parseFloat(window.getComputedStyle(canvas).width);
+          canvas.height = parseFloat(window.getComputedStyle(canvas).height);
+      }
+
+      var begin = async function()
+      {
+          button.style.visibility = "hidden";
+          audio.src = "./Homer's Day.wav";
+          sound_engine = new window.AudioContext();
+          await sound_engine.audioWorklet.addModule("./LevelMeter.js");
+          audio_source = sound_engine.createMediaElementSource(audio);
+          audio_source.connect(sound_engine.destination);
+          level_biquad = new Array(bands);
+          level_meters = new Array(bands);
+          levels = new Array(bands);
+          frequencies = new Array(bands);
+          for (var i = 0; i < bands; ++i)
+          {
+              var e = Math.pow(((i + 1) / bands), 2);
+              frequencies[i] = e * (((i + 1) / bands) * 20000);
+              level_biquad[i] = sound_engine.createBiquadFilter();
+              level_biquad[i].type = "bandpass";
+              level_biquad[i].frequency.setValueAtTime(frequencies[i], sound_engine.currentTime);
+              level_biquad[i].gain.setValueAtTime(gain, sound_engine.currentTime);
+              audio_source.connect(level_biquad[i]);
+              level_meters[i] = new AudioWorkletNode(sound_engine, "LevelMeter");
+              level_meters[i].parameters.get("id").setValueAtTime(i, sound_engine.currentTime);
+              level_meters[i].port.onmessage = message;
+              level_biquad[i].connect(level_meters[i]);
+              levels[i] = [[0.0, 0.0], [new Float32Array(smooth), new Float32Array(smooth)]];
+              //if (i == 5) { level_biquad[i].connect(sound_engine.destination); }
+          }
+          setTimeout(() => { audio.play(); }, 5000);
+          setInterval(() => { update(); }, 0);
+      }
+
+      var msg = 0;
+      var sum = 0;
+      var message = function(event)
+      {
+          msg = JSON.parse(event.data);
+          if (msg.origin == "LevelMeter")
+          {
+              for (var i = (smooth - 1); i > 0; --i)
+              {
+                  levels[msg.id][1][msg.ch][i] = levels[msg.id][1][msg.ch][i - 1];
+              }
+              levels[msg.id][1][msg.ch][0] = msg.value;
+              sum = 0;
+              for (var i = (smooth - 1); i >= 0; --i)
+              {
+                  sum += levels[msg.id][1][msg.ch][i];
+              }
+              levels[msg.id][0][msg.ch] = sum / smooth;
+          }
+      }
+
+      var update = function()
+      {
+          ctx.imageSmoothingEnabled = false;
+          ctx.fillStyle = "rgba(40, 0, 0, " + peak_alpha + ")";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          for (var i = 0; i < bands; ++i)
+          {
+              ctx.fillStyle = "rgba(255, 255, 0, " + level_alpha + ")";
+              ctx.fillRect((canvas.width / bands) * i,
+                           canvas.height - (levels[i][0][0] * calibration * canvas.height),
+                           ((canvas.width * 0.9) / bands), canvas.height);
+          }
+          if (Math.random() < text1chance)
+          {
+              stride = parseInt(Math.random() * 10.0);
+              //div1.innerText += text1.substring(text1pos, stride);
+              div1.innerText += text1.substring(text1pos, text1pos + stride);
+              div1.scrollTop = div1.scrollHeight;
+              text1pos += stride;
+              if (text1pos >= text1.length)
+              {
+                  div1.innerText += text1.substring(text1pos, text1.length - text1pos) + "\n\n\n\n";
+                  text1pos = 0;
+              }
+          }
+          if (Math.random() < text2chance)
+          {
+              stride = parseInt(Math.random() * 10.0);
+              //div2.innerText += text2.substring(text2pos, stride);
+              div2.innerText += text2.substring(text2pos, text2pos + stride);
+              div2.scrollTop = div2.scrollHeight;
+              text2pos += stride;
+              if (text2pos >= text2.length)
+              {
+                  div2.innerText += text2.substring(text2pos, text2.length - text2pos) + "\n\n\n\n";
+                  text2pos = 0;
+              }
+          }
+      }
+
+      var getFile = function(url)
+      {
+          request = new XMLHttpRequest();
+          request.open("GET", url, false); //DO NOT SET TO TRUE!!!
+          request.send(0);
+          return request.responseText;
+      }
+    </script>
+    <style>
+      * { box-sizing: border-box; margin: auto; overflow: hidden; font-family: consolas; color: white; }
+      body { background: black; }
+      audio { position: fixed; top: 0; left: 0; width: 0; height: 0; opacity: 0; }
+      button { position: fixed; top: 0; left: 0; width: 100%; height: 100%; text-align: center; color: black; background: yellow; font-size: 50pt; user-select: none; z-index: 9999; }
+      canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+      #div1 { position: fixed; top: 0; left: 0; width: 50%; height: 100%; color: rgba(40, 255, 255, 1.0); text-shadow: 0 0 5px rgba(40, 255, 255, 1.0); font-size: 20pt; font-weight: bold; word-wrap: break-word; white-space: pre-wrap; }
+      #div2 { position: fixed; top: 0; left: 50%; width: 50%; height: 100%; color: rgba(255, 40, 255, 1.0); text-shadow: 0 0 5px rgba(255, 40, 255, 1.0); font-size: 20pt; font-weight: bold; word-wrap: break-word; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <audio></audio>
+    <button></button>
+    <canvas></canvas>
+    <div id="div1"></div>
+    <div id="div2"></div>
+  </body>
+</html>
