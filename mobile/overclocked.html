@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>CodeViz</title>
+    <script>
+      var audio = null;
+      var button = null;
+      var canvas = null;
+      var ctx = null;
+      var div = null;
+
+      var sound_engine = null;
+      var audio_source = null;
+      var gain_node = null;
+      var level_domain = null;
+      var level_meters = null;
+      var level_data = null;
+
+      var bands = 32;
+      var calibration = 2;
+
+      var text = "Something Random";
+      var text_pos = 0;
+      var text_chance = 0.05;
+      var stride = 10;
+
+      var i = 0;
+      var b = 0;
+      var bw = 0;
+
+      window.onload = function()
+      {
+          audio = document.getElementsByTagName("audio")[0];
+          button = document.getElementsByTagName("button")[0];
+          canvas = document.getElementsByTagName("canvas")[0];
+          ctx = canvas.getContext("2d"); //webgl???
+          div = document.getElementsByTagName("div")[0];
+          text = getFile("index.html");
+          audio.loop = true;
+          window.onresize();
+      }
+
+      window.onresize = function()
+      {
+          canvas.width = parseFloat(window.getComputedStyle(canvas).width);
+          canvas.height = parseFloat(window.getComputedStyle(canvas).height);
+      }
+
+      var begin = async function()
+      {
+          ctx.imageSmoothingEnabled = false;
+          button.style.visibility = "hidden";
+          sound_engine = new AudioContext();
+          audio_source = sound_engine.createMediaElementSource(audio);
+          gain_node = sound_engine.createGain();
+          gain_node.gain.setValueAtTime(0.5, sound_engine.currentTime);
+          audio_source.connect(gain_node);
+          gain_node.connect(sound_engine.destination);
+          level_domain = sound_engine.createAnalyser();
+          level_domain.fftSize = bands;
+          gain_node.connect(level_domain);
+          level_meters = new Float32Array(bands);
+          level_data = new Uint8Array(bands);
+          audio.play();
+          //setTimeout(() => { audio.play(); }, 5000); //Doesn't work?
+          setInterval(() => { update(); }, 0); //Overclocked
+          setInterval(() => { levels(); }, 0); //To The
+          setInterval(() => { writer(); }, 0); //Max
+      }
+
+      var update = function()
+      {
+          ctx.fillStyle = "rgba(40, 0, 0, 0.1)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "rgba(255, 0, 0, 0.8)";
+          bw = canvas.width / bands;
+          for (i = 0; i < bands; ++i)
+          {
+              ctx.fillRect(bw * i,
+                           canvas.height - (level_meters[i] * calibration * canvas.height),
+                           bw, canvas.height);
+          }
+      }
+
+      var levels = function()
+      {
+          level_domain.getByteTimeDomainData(level_data);
+          for (b = 0; b < bands; ++b)
+          {
+              level_meters[b] = Math.abs(level_data[b] - 127.0) / 127.0;
+          }
+      }
+
+      var writer = function()
+      {
+          if (Math.random() < text_chance)
+          {
+              div.innerText += text.substring(text_pos, text_pos + stride);
+              div.scrollTop = div.scrollHeight;
+              text_pos += stride;
+              if (text_pos >= text.length)
+              {
+                  div.innerText = "";
+                  text_pos = 0;
+              }
+          }
+      }
+
+      var getFile = function(url)
+      {
+          request = new XMLHttpRequest();
+          request.open("GET", url, false); //DO NOT SET TO TRUE!!!
+          request.send(0);
+          return request.responseText;
+      }
+    </script>
+    <style>
+      * { box-sizing: border-box; margin: auto; overflow: hidden; text-align: justify; font-family: sans-serif; color: white; }
+      body { background: black; }
+      audio { position: fixed; top: 0; left: 0; width: 0; height: 0; opacity: 0; }
+      button { position: fixed; top: 0; left: 0; width: 100%; height: 100%; text-align: center; color: white; background: red; font-size: 50pt; user-select: none; z-index: 9999; }
+      canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+      div { position: fixed; top: 0; left: 0; width: 100%; height: 100%; color: rgba(255, 255, 255, 0.9); font-size: 15pt; font-weight: bold; text-shadow: 0 0 7.5pt rgba(255, 255, 255, 0.9); word-wrap: break-word; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <audio><source src="Aurora.mp3" type="audio/mp3" /></audio>
+    <button onclick="begin();">Play</button>
+    <canvas></canvas>
+    <div></div>
+  </body>
+</html>
