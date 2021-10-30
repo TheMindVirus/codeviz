@@ -4,6 +4,6 @@ Aurora - TheMindVirus
 
 Demo: https://themindvirus.github.io/codeviz/
 
-![screenshot]("https://github.com/themindvirus/codeviz/blob/main/screenshot.png")
+![screenshot]("https://github.com/TheMindVirus/codeviz/blob/main/screenshot.png")
 
 Audio is going to become MetaSound and Videos are going to become MetaClips once the MetaVerse kicks off.
